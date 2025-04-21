@@ -43,7 +43,9 @@ target_sources(example
   PRIVATE example/main.cpp
 )
 target_link_libraries(example
-  PRIVATE json
+  PRIVATE
+    json
+    fmt::fmt
 )
 target_compile_options(example
   PRIVATE
