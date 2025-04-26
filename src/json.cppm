@@ -117,33 +117,13 @@ auto format_as(Token const& token) -> std::string {
   }
 }
 
-// TODO: move this over to uzleo::utils
-template <class T>
-constexpr auto ChunkSpan(std::span<T> source, std::size_t size)
-    -> std::vector<std::span<T>> {
-  if (rng::size(source) % size) {
-    throw std::logic_error{fmt::format(
-        "Source span of size: {} can not be chunked by passed size arg: {}.",
-        rng::size(source), size)};
-  }
-
-  std::vector<std::span<T>> span_chunks{};
-  span_chunks.reserve(rng::size(source) / size);
-  for (auto citer{rng::cbegin(source)}; citer != rng::cend(source);
-       rng::advance(citer, size, rng::cend(source))) {
-    span_chunks.push_back(std::span{citer, size});
-  }
-
-  return span_chunks;
-}
-
 }  // namespace
 
 namespace uzleo::json {
 
 export class Json final {
  public:
-  //  constexpr Json() = default;
+  constexpr Json() = default;
   constexpr explicit Json(auto const& value) : m_value{value} {}
   constexpr Json(Json&& other) = default;
   constexpr Json& operator=(Json&& other) = default;
@@ -330,115 +310,139 @@ constexpr auto ParseTokens(std::tuple<std::shared_ptr<std::string const>,
                                       TokenStream>&& token_stream_with_buffer)
     -> Json {
   auto const parse{[](this auto const& self,
-                      std::span<Token const> token_stream_span) -> Json {
+                      std::span<Token const> token_stream_span)
+                       -> std::pair<Json, std::span<Token const>> {
     using enum TokenType;
 
-    auto token_stream_span_end_iter{rng::end(token_stream_span)};
+    if (rng::size(token_stream_span) == 0) {
+      throw std::invalid_argument(
+          "recursive parse called with empty token-stream.");
+    }
 
-    switch (auto const& token{token_stream_span.front()}; token.type) {
+    Json ret_json{};
+    // switch is responsible for creating the json instance that will be
+    // returned as .first
+    switch (token_stream_span.front().type) {
       case kLeftBrace: {
-        if (token_stream_span.back().type != kRightBrace) {
-          throw std::invalid_argument{
-              "Failed to parse tokens due to non-matching }."};
-        }
-
-        if (rng::size(token_stream_span) == 2) {
-          // empty json object '{}' case
-          return Json{std::unordered_map<std::string, json_value_t>{}};
-        }
-
-        // consume { token
         token_stream_span = token_stream_span.subspan(1);
 
         std::unordered_map<std::string, json_value_t> sub_json{};
-        for (auto const token_chunk : ChunkSpan(token_stream_span, 4)) {
-          // chunk: {kString, kColon, kFoo, kComma or kRightBrace}
-
-          // FIXME: when value type is json-object/array
-
-          if (token_chunk[0].type != kString and
-              token_chunk[1].type != kColon) {
-            throw std::invalid_argument{
-                fmt::format("Failed to parse token chunk: {}.", token_chunk)};
+        while (true) {
+          if (token_stream_span.front().type == kRightBrace) {
+            ret_json = Json{sub_json};
+            break;
           }
-          if (token_chunk[3].type != kComma and
-              token_chunk[3].type != kRightBrace) {
-            throw std::invalid_argument{
-                fmt::format("Failed to parse token chunk: {}.", token_chunk)};
-          }
-          // TODO(): check token_chunk.at(2)
 
-          sub_json.emplace(self(token_chunk).template GetValue<std::string>(),
-                           GetRawValue(self(token_chunk.subspan(2))));
+          if (token_stream_span.at(0).type == kString and
+              token_stream_span.at(1).type == kColon) {
+            auto sub_json_element_key =
+                self(token_stream_span).first.template GetValue<std::string>();
+            token_stream_span = token_stream_span.subspan(2);
+
+            auto [json_returned, advanced_subspan] = self(token_stream_span);
+            auto sub_json_element_value = GetRawValue(json_returned);
+            token_stream_span = advanced_subspan;
+
+            sub_json.emplace(sub_json_element_key, sub_json_element_value);
+          } else {
+            throw std::runtime_error{fmt::format(
+                "Parser expectes string and colon for map key, token-stream: "
+                "{}",
+                token_stream_span)};
+          }
         }
 
-        return Json{sub_json};
+        break;
       }
+
       case kLeftBracket: {
-        if (token_stream_span.back().type != kRightBracket) {
-          throw std::invalid_argument{
-              "Failed to parse tokens due to non-matching ]."};
-        }
-
-        if (rng::size(token_stream_span) == 2) {
-          // empty json object '[]' case
-          return Json{std::vector<json_value_t>{}};
-        }
-
-        // consume { token
         token_stream_span = token_stream_span.subspan(1);
 
         std::vector<json_value_t> sub_json{};
         // TODO: reserve size ?
-        for (auto const token_chunk : ChunkSpan(token_stream_span, 2)) {
-          // chunk: {kFoo, kComma or kRightBracket}
-
-          // FIXME: when value type is json-object/array
-
-          // TODO(): check token_chunk.at(0) similar to above
-
-          if (token_chunk[1].type != kComma and
-              token_chunk[1].type != kRightBracket) {
-            throw std::invalid_argument{
-                fmt::format("Failed to parse token chunk: {}", token_chunk)};
+        while (true) {
+          if (token_stream_span.front().type == kRightBracket) {
+            ret_json = Json{sub_json};
+            break;
           }
 
-          sub_json.push_back(GetRawValue(self(token_chunk)));
+          auto [sub_json_element, advanced_subspan] = self(token_stream_span);
+          sub_json.push_back(GetRawValue(sub_json_element));
+          token_stream_span = advanced_subspan;
         }
 
-        return Json{sub_json};
+        break;
       }
+
       case kString: {
-        return Json{std::string{token.lexeme}};
+        ret_json = Json{std::string{token_stream_span.front().lexeme}};
+        break;
       }
+
       case kTrue: {
-        return Json{true};
+        ret_json = Json{true};
+        break;
       }
+
       case kFalse: {
-        return Json{false};
+        ret_json = Json{false};
+        break;
       }
+
       case kNull: {
-        return Json{std::monostate{}};
+        ret_json = Json{std::monostate{}};
+        break;
       }
+
       case kNumber: {
         double value;
+        auto const& token{token_stream_span.front()};
+
         auto char_conv_result{std::from_chars(rng::begin(token.lexeme),
                                               rng::end(token.lexeme), value)};
-        if (char_conv_result.ec != std::errc{}) {
+        if (char_conv_result.ec != std::errc{} or
+            char_conv_result.ptr != rng::end(token.lexeme)) {
           throw std::runtime_error(
               fmt::format("Failed to convert into number the token lexeme: {}",
                           token.lexeme));
         }
-        return Json{value};
+        ret_json = Json{value};
+        break;
       }
+
       default: {
         throw std::logic_error{fmt::format("Unexpected token received: {}",
                                            token_stream_span.front())};
       }
     }
+
+    token_stream_span = token_stream_span.subspan(1);
+    if (rng::size(token_stream_span) == 0) {
+      return {Json{std::move(ret_json)}, token_stream_span};
+    }
+
+    auto const token_type{token_stream_span.front().type};
+    if (not(token_type == kComma or token_type == kColon or
+            token_type == kRightBrace or token_type == kRightBracket)) {
+      throw std::runtime_error(fmt::format(
+          "Parser expecting `,:}}]`, but token-stream: {}", token_stream_span));
+    }
+
+    if (token_type == kComma) {
+      token_stream_span = token_stream_span.subspan(1);
+
+      if (token_stream_span.front().type == kRightBrace or
+          token_stream_span.front().type == kRightBracket) {
+        throw std::runtime_error(
+            fmt::format("Parser not expecting }}], but token-stream: {}",
+                        token_stream_span));
+      }
+    }
+
+    return {Json{std::move(ret_json)}, token_stream_span};
   }};
 
-  return parse(std::get<TokenStream>(token_stream_with_buffer));
+  return parse(std::get<TokenStream>(token_stream_with_buffer)).first;
 }
 
 }  // namespace uzleo::json
@@ -458,3 +462,8 @@ constexpr auto ParseTokens(std::tuple<std::shared_ptr<std::string const>,
 // [ ] parse the json content lazily .. this helps in reducing memory usage for
 // holding json-content, token-stream buffers at runtime .. possibly use libcoro
 // framework for co-routines
+//
+// [ ] disable copy operations on json_value_t
+//
+// TODOs:
+// [ ] mutability of json object after construction
