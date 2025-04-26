@@ -138,6 +138,8 @@ export class Json final {
 
   constexpr auto Print() const { fmt::println("{}", m_value); }
 
+  constexpr auto Dump() const { return fmt::format("{}", m_value); }
+
  private:
   json_value_t m_value{};
 
