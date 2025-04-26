@@ -1,4 +1,6 @@
 
+#include <nlohmann/json.hpp>
+
 import uzleo.json;
 import fmt;
 import std;
@@ -23,7 +25,11 @@ auto ParseEmptyObject() {
   auto json = uzleo::json::Parse(kFilePath);
 
   // verify
-  // TODO
+  auto njson = nlohmann::json::parse(json.Dump());
+  if (njson.size() != 0) {
+    throw std::runtime_error{
+        fmt::format("json content is weird. Dump(): {}", json.Dump())};
+  }
 }
 
 auto ParseSimpleObject() {
