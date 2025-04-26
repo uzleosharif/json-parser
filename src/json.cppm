@@ -27,7 +27,7 @@ auto format_as(json_value_t const& value) -> std::string {
 
   return std::visit(
       overloaded{
-          [](std::monostate monostate) { return "null"s; },
+          []([[maybe_unused]] std::monostate monostate) { return "null"s; },
           [](bool value) { return fmt::format("{}", value); },
           [](std::string const& value) { return value; },
           [](double value) { return fmt::format("{}", value); },
@@ -132,7 +132,7 @@ export class Json final {
   Json& operator=(Json const&) = delete;
 
   template <class T>
-  constexpr auto GetValue() -> T const& {
+  [[nodiscard]] constexpr auto GetValue() -> T const& {
     return std::get<T>(m_value);
   }
 
@@ -154,8 +154,8 @@ constexpr auto ParseTokens(std::tuple<std::shared_ptr<std::string const>,
                                       TokenStream>&& token_stream_with_buffer)
     -> Json;
 
-export constexpr auto Parse(std::filesystem::path&& absolute_file_path)
-    -> Json {
+export [[nodiscard]] constexpr auto Parse(
+    std::filesystem::path&& absolute_file_path) -> Json {
   return ReadFile(std::move(absolute_file_path))
       .transform(Lex)
       .transform(ParseTokens)
@@ -294,7 +294,8 @@ constexpr auto Lex(std::shared_ptr<std::string const>&& json_content_ptr)
             break;
           }
 
-          throw std::invalid_argument{"Failed to lex number."};
+          throw std::invalid_argument{
+              fmt::format("Failed to lex number, tmp_view: {}", tmp_view)};
         }
 
         throw std::invalid_argument{
@@ -316,7 +317,7 @@ constexpr auto ParseTokens(std::tuple<std::shared_ptr<std::string const>,
 
     if (rng::size(token_stream_span) == 0) {
       throw std::invalid_argument(
-          "recursive parse called with empty token-stream.");
+          "Recursive parse called with empty token-stream.");
     }
 
     Json ret_json{};
