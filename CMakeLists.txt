@@ -20,7 +20,6 @@ set_target_properties(fmt::fmt
 )
 
 add_library(json)
-
 target_sources(json
   PUBLIC
     FILE_SET modules
@@ -34,6 +33,14 @@ target_compile_features(json
 target_link_libraries(json
   PRIVATE
     fmt::fmt
+)
+target_compile_options(json
+  PRIVATE
+    "-Wall"
+    "-Wextra"
+    "-Wshadow"
+    "-Wpedantic"
+    "-Werror"
 )
 
 
@@ -54,3 +61,14 @@ target_link_options(example
   PRIVATE
     "-fsanitize=address,leak"
 )
+
+add_executable(test)
+target_sources(test
+  PRIVATE test/test_json.cpp
+)
+target_link_libraries(test
+  PRIVATE
+    json
+    fmt::fmt
+)
+
