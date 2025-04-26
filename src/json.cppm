@@ -36,7 +36,7 @@ auto format_as(json_value_t const& value) -> std::string {
             bool first{true};
             for (auto const& [key, val] : value) {
               if (!first) result += ", ";
-              result += fmt::format("\"{}\": {}", key, format_as(val));
+              result += fmt::format("{}: {}", key, format_as(val));
               first = false;
             }
             result += "}";
@@ -269,8 +269,7 @@ constexpr auto Lex(std::shared_ptr<std::string const>&& json_content_ptr)
           auto const lexeme_with_commas_size{
               rng::distance(rng::begin(tmp_view), json_string_end_iter)};
           token_stream.emplace_back(
-              TokenType::kString,
-              tmp_view.substr(1, lexeme_with_commas_size - 2));
+              TokenType::kString, tmp_view.substr(0, lexeme_with_commas_size));
 
           rng::advance(citer, lexeme_with_commas_size, json_content_end_iter);
           break;
