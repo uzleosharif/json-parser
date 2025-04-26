@@ -26,31 +26,41 @@ auto format_as(json_value_t const& value) -> std::string {
   using namespace std::string_literals;
 
   return std::visit(
-      overloaded{[](std::monostate monostate) { return "null"s; },
-                 [](bool value) { return fmt::format("{}", value); },
-                 [](std::string value) { return value; },
-                 [](double value) { return fmt::format("{}", value); },
-                 [](std::unordered_map<std::string, json_value_t> value) {
-                   std::string result = "{";
-                   bool first = true;
-                   for (auto const& [key, val] : value) {
-                     if (!first) result += ", ";
-                     result += fmt::format("\"{}\": {}", key, format_as(val));
-                     first = false;
-                   }
-                   result += "}";
-                   return result;
-                 },
-                 [](std::vector<json_value_t> value) {
-                   // TODO
-                   return ""s;
-                 }},
+      overloaded{
+          [](std::monostate monostate) { return "null"s; },
+          [](bool value) { return fmt::format("{}", value); },
+          [](std::string const& value) { return value; },
+          [](double value) { return fmt::format("{}", value); },
+          [](std::unordered_map<std::string, json_value_t> const& value) {
+            std::string result = "{";
+            bool first{true};
+            for (auto const& [key, val] : value) {
+              if (!first) result += ", ";
+              result += fmt::format("\"{}\": {}", key, format_as(val));
+              first = false;
+            }
+            result += "}";
+            return result;
+          },
+          [](std::vector<json_value_t> const& value) {
+            std::string result = "[";
+            bool first{true};
+            for (auto const& v : value) {
+              if (!first) result += ", ";
+              result += format_as(v);
+              first = false;
+            }
+            result += "]";
+            return result;
+          }},
       value);
 }
 
 enum class TokenType {
   kLeftBrace,
   kRightBrace,
+  kLeftBracket,
+  kRightBracket,
   kFalse,
   kTrue,
   kNumber,
@@ -98,10 +108,16 @@ auto format_as(Token const& token) -> std::string {
     case kComma: {
       return "comma";
     }
+    case kLeftBracket: {
+      return "[";
+    }
+    case kRightBracket: {
+      return "]";
+    }
   }
 }
 
-// move this over to uzleo::utils
+// TODO: move this over to uzleo::utils
 template <class T>
 constexpr auto ChunkSpan(std::span<T> source, std::size_t size)
     -> std::vector<std::span<T>> {
@@ -274,6 +290,18 @@ constexpr auto Lex(std::shared_ptr<std::string const>&& json_content_ptr)
         rng::advance(citer, 1, json_content_end_iter);
         break;
       }
+      case '[': {
+        token_stream.emplace_back(TokenType::kLeftBracket);
+
+        rng::advance(citer, 1, json_content_end_iter);
+        break;
+      }
+      case ']': {
+        token_stream.emplace_back(TokenType::kRightBracket);
+
+        rng::advance(citer, 1, json_content_end_iter);
+        break;
+      }
       default: {
         if (in_number(*citer)) {
           if (auto number_end_iter{rng::find_if_not(tmp_view, in_number)};
@@ -310,30 +338,32 @@ constexpr auto ParseTokens(std::tuple<std::shared_ptr<std::string const>,
 
     switch (auto const& token{token_stream_span.front()}; token.type) {
       case kLeftBrace: {
-        if (rng::size(token_stream_span) == 2) {
-          // empty json object '{}' case
-          if (token_stream_span.back().type != kRightBrace) {
-            throw std::invalid_argument{
-                "Failed to parse tokens due to non-matching }."};
-          }
-          return Json{std::unordered_map<std::string, json_value_t>{}};
+        if (token_stream_span.back().type != kRightBrace) {
+          throw std::invalid_argument{
+              "Failed to parse tokens due to non-matching }."};
         }
 
-        std::unordered_map<std::string, json_value_t> sub_json{};
+        if (rng::size(token_stream_span) == 2) {
+          // empty json object '{}' case
+          return Json{std::unordered_map<std::string, json_value_t>{}};
+        }
 
         // consume { token
         token_stream_span = token_stream_span.subspan(1);
 
+        std::unordered_map<std::string, json_value_t> sub_json{};
         for (auto const token_chunk : ChunkSpan(token_stream_span, 4)) {
-          // chunk: {kString, kColon, kFoo, kComma}
+          // chunk: {kString, kColon, kFoo, kComma or kRightBrace}
 
-          if (token_chunk.at(0).type != kString and
-              token_chunk.at(1).type != kColon) {
+          // FIXME: when value type is json-object/array
+
+          if (token_chunk[0].type != kString and
+              token_chunk[1].type != kColon) {
             throw std::invalid_argument{
                 fmt::format("Failed to parse token chunk: {}.", token_chunk)};
           }
-          if (token_chunk.at(3).type != kComma and
-              token_chunk.at(3).type != kRightBrace) {
+          if (token_chunk[3].type != kComma and
+              token_chunk[3].type != kRightBrace) {
             throw std::invalid_argument{
                 fmt::format("Failed to parse token chunk: {}.", token_chunk)};
           }
@@ -341,6 +371,40 @@ constexpr auto ParseTokens(std::tuple<std::shared_ptr<std::string const>,
 
           sub_json.emplace(self(token_chunk).template GetValue<std::string>(),
                            GetRawValue(self(token_chunk.subspan(2))));
+        }
+
+        return Json{sub_json};
+      }
+      case kLeftBracket: {
+        if (token_stream_span.back().type != kRightBracket) {
+          throw std::invalid_argument{
+              "Failed to parse tokens due to non-matching ]."};
+        }
+
+        if (rng::size(token_stream_span) == 2) {
+          // empty json object '[]' case
+          return Json{std::vector<json_value_t>{}};
+        }
+
+        // consume { token
+        token_stream_span = token_stream_span.subspan(1);
+
+        std::vector<json_value_t> sub_json{};
+        // TODO: reserve size ?
+        for (auto const token_chunk : ChunkSpan(token_stream_span, 2)) {
+          // chunk: {kFoo, kComma or kRightBracket}
+
+          // FIXME: when value type is json-object/array
+
+          // TODO(): check token_chunk.at(0) similar to above
+
+          if (token_chunk[1].type != kComma and
+              token_chunk[1].type != kRightBracket) {
+            throw std::invalid_argument{
+                fmt::format("Failed to parse token chunk: {}", token_chunk)};
+          }
+
+          sub_json.push_back(GetRawValue(self(token_chunk)));
         }
 
         return Json{sub_json};
@@ -356,6 +420,17 @@ constexpr auto ParseTokens(std::tuple<std::shared_ptr<std::string const>,
       }
       case kNull: {
         return Json{std::monostate{}};
+      }
+      case kNumber: {
+        double value;
+        auto char_conv_result{std::from_chars(rng::begin(token.lexeme),
+                                              rng::end(token.lexeme), value)};
+        if (char_conv_result.ec != std::errc{}) {
+          throw std::runtime_error(
+              fmt::format("Failed to convert into number the token lexeme: {}",
+                          token.lexeme));
+        }
+        return Json{value};
       }
       default: {
         throw std::logic_error{fmt::format("Unexpected token received: {}",
