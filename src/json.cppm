@@ -283,19 +283,14 @@ constexpr auto Lex(std::shared_ptr<std::string const>&& json_content_ptr)
       }
       default: {
         if (in_number(*citer)) {
-          if (auto number_end_iter{rng::find_if_not(tmp_view, in_number)};
-              number_end_iter != rng::end(tmp_view)) {
-            auto const lexeme_size{
-                rng::distance(rng::begin(tmp_view), number_end_iter)};
-            token_stream.emplace_back(TokenType::kNumber,
-                                      tmp_view.substr(0, lexeme_size));
+          auto number_end_iter{rng::find_if_not(tmp_view, in_number)};
+          auto const lexeme_size{
+              rng::distance(rng::begin(tmp_view), number_end_iter)};
+          token_stream.emplace_back(TokenType::kNumber,
+                                    tmp_view.substr(0, lexeme_size));
 
-            rng::advance(citer, lexeme_size, json_content_end_iter);
-            break;
-          }
-
-          throw std::invalid_argument{
-              fmt::format("Failed to lex number, tmp_view: {}", tmp_view)};
+          rng::advance(citer, lexeme_size, json_content_end_iter);
+          break;
         }
 
         throw std::invalid_argument{
