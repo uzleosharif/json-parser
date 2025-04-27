@@ -19,64 +19,8 @@ set_target_properties(fmt::fmt
     CXX_STANDARD_REQUIRED ON
 )
 
-add_library(json)
-target_sources(json
-  PUBLIC
-    FILE_SET modules
-      TYPE CXX_MODULES
-      FILES src/json.cppm
-)
-target_compile_features(json
-  PUBLIC
-    cxx_std_26
-)
-target_link_libraries(json
-  PRIVATE
-    fmt::fmt
-)
-target_compile_options(json
-  PRIVATE
-    "-Wall"
-    "-Wextra"
-    "-Wshadow"
-    "-Wpedantic"
-    "-Werror"
-)
 
 
-add_executable(example)
-target_sources(example
-  PRIVATE example/main.cpp
-)
-target_link_libraries(example
-  PRIVATE
-    json
-    fmt::fmt
-)
-target_compile_options(example
-  PRIVATE
-    "-fsanitize=address,leak"
-)
-target_link_options(example
-  PRIVATE
-    "-fsanitize=address,leak"
-)
-
-add_executable(test)
-target_sources(test
-  PRIVATE test/test_json.cpp
-)
-target_link_libraries(test
-  PRIVATE
-    json
-    fmt::fmt
-)
-target_compile_options(test
-  PRIVATE
-    "-fsanitize=address,leak"
-)
-target_link_options(test
-  PRIVATE
-    "-fsanitize=address,leak"
-)
-
+add_subdirectory(src/)
+add_subdirectory(test/)
+add_subdirectory(example/)
