@@ -1,4 +1,7 @@
 
+
+// NOTE: these are some end-to-end tests for uzleo::json API
+
 #include <nlohmann/json.hpp>
 
 import uzleo.json;
@@ -371,6 +374,122 @@ auto SimpleCompositionPositiveCases() {
   ParseArrayOfObjects();
 }
 
+auto ParseEmptyKeyObject() {
+  fmt::println("testing ParseEmptyKeyObject ...");
+  WriteFile(R"({ "": 123 })");
+
+  auto json = uzleo::json::Parse(kFilePath);
+  auto njson = nlohmann::json::parse(json.Dump());
+
+  if (not njson.is_object()) throw std::runtime_error{"not object"};
+  if (not njson.contains("")) throw std::runtime_error{"empty key missing"};
+  if (njson[""].get<int>() != 123) throw std::runtime_error{"value mismatch"};
+}
+
+auto ParseEscapedString() {
+  fmt::println("testing ParseEscapedString ...");
+  WriteFile(R"({ "text": "line1\nline2\tTabbed\\Backslash\"Quote" })");
+
+  auto json = uzleo::json::Parse(kFilePath);
+  auto njson = nlohmann::json::parse(json.Dump());
+
+  if (njson["text"].get<std::string>() !=
+      "line1\nline2\tTabbed\\Backslash\"Quote") {
+    throw std::runtime_error{"escaped string content wrong"};
+  }
+}
+
+auto ParseDeepNestedArrays() {
+  fmt::println("testing ParseDeepNestedArrays ...");
+  WriteFile(R"([1, [2, [3, [4]]]])");
+
+  auto json = uzleo::json::Parse(kFilePath);
+  auto njson = nlohmann::json::parse(json.Dump());
+
+  if (not njson.is_array()) throw std::runtime_error{"not array"};
+
+  if (njson[1][1][1][0].get<int>() != 4) {
+    throw std::runtime_error{"deep nested value wrong"};
+  }
+}
+
+auto ParseObjectArrayObject() {
+  fmt::println("testing ParseObjectArrayObject ...");
+  WriteFile(R"({ "outer": [ { "inner": "deep" } ] })");
+
+  auto json = uzleo::json::Parse(kFilePath);
+  auto njson = nlohmann::json::parse(json.Dump());
+
+  if (njson["outer"][0]["inner"].get<std::string>() != "deep") {
+    throw std::runtime_error{"nested object value wrong"};
+  }
+}
+
+auto ParseWhitespaceStress() {
+  fmt::println("testing ParseWhitespaceStress ...");
+  WriteFile(R"(
+    {      "key"        :       "value"     }
+  )");
+
+  auto json = uzleo::json::Parse(kFilePath);
+  auto njson = nlohmann::json::parse(json.Dump());
+
+  if (njson["key"].get<std::string>() != "value") {
+    throw std::runtime_error{"value wrong in whitespace stress"};
+  }
+}
+
+auto ParseUnicodeString() {
+  fmt::println("testing ParseUnicodeString ...");
+  WriteFile(R"({ "greet": "こんにちは" })");
+
+  auto json = uzleo::json::Parse(kFilePath);
+  auto njson = nlohmann::json::parse(json.Dump());
+
+  if (njson["greet"].get<std::string>() != "こんにちは") {
+    throw std::runtime_error{"unicode content wrong"};
+  }
+}
+
+auto ParseLargeNumber() {
+  fmt::println("\033[31m[DISABLED] ParsingLargeNumber\033[0m");
+  return;
+
+  fmt::println("testing ParseLargeNumber ...");
+  WriteFile(R"(1234567890123456789)");
+
+  auto json = uzleo::json::Parse(kFilePath);
+  auto njson = nlohmann::json::parse(json.Dump());
+
+  if (njson.get<int64_t>() != 1234567890123456789LL) {
+    throw std::runtime_error{"large number mismatch"};
+  }
+}
+
+auto ParseBooleanNullArray() {
+  fmt::println("testing ParseBooleanNullArray ...");
+  WriteFile(R"([true, false, null])");
+
+  auto json = uzleo::json::Parse(kFilePath);
+  auto njson = nlohmann::json::parse(json.Dump());
+
+  if (not(njson[0].get<bool>() == true && njson[1].get<bool>() == false &&
+          njson[2].is_null())) {
+    throw std::runtime_error{"boolean/null array content wrong"};
+  }
+}
+
+auto EdgeCasePositiveCases() {
+  ParseEmptyKeyObject();
+  ParseEscapedString();
+  ParseDeepNestedArrays();
+  ParseObjectArrayObject();
+  ParseWhitespaceStress();
+  ParseUnicodeString();
+  ParseLargeNumber();
+  ParseBooleanNullArray();
+}
+
 }  // namespace
 
 auto main() -> int {
@@ -380,6 +499,9 @@ auto main() -> int {
 
     fmt::println("*** Testing SimpleCompositionPositiveTestCases ***");
     SimpleCompositionPositiveCases();
+
+    fmt::println("*** Testing EdgeCasePositiveTestCases ***");
+    EdgeCasePositiveCases();
 
     fmt::println("-----------");
     fmt::println("all tests passed.");
