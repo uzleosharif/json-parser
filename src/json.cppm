@@ -147,8 +147,11 @@ export class Json final {
   }
 };
 
+/// this allocates the string buffer (holding json) data on heap so that it is
+/// alive throughout the program. This allows views over it to be used for
+/// lex/parse algorithms
 constexpr auto ReadFile(std::filesystem::path&& absolute_file_path)
-    -> std::optional<std::shared_ptr<std::string const>> {
+    -> std::shared_ptr<std::string const> {
   if (not std::filesystem::exists(absolute_file_path)) {
     throw std::invalid_argument{
         fmt::format("Json {} file does not exist.", absolute_file_path)};
@@ -440,7 +443,7 @@ constexpr auto ParseTokens(std::tuple<std::shared_ptr<std::string const>,
 
 export [[nodiscard]] constexpr auto Parse(
     std::filesystem::path&& absolute_file_path) -> Json {
-  return ReadFile(std::move(absolute_file_path))
+  return std::optional{ReadFile(std::move(absolute_file_path))}
       .transform(Lex)
       .transform(ParseTokens)
       .value();
