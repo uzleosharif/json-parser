@@ -145,10 +145,20 @@ export class Json final {
       throw std::logic_error{"json is not an object."};
     }
 
-    std::reference_wrapper<json_object_t const> json_object_ref{
-        std::get<json_object_t>(m_value)};
-    return json_object_ref.get().contains(
-        fmt::format("\"{}\"", std::string{key}));
+    return std::get<json_object_t>(m_value).contains(
+        fmt::format("\"{}\"", key));
+  }
+
+  template <class T>
+  [[nodiscard]] constexpr auto GetObjectValue(std::string_view key) const
+      -> T const& {
+    if (not Contains(key)) {
+      throw std::invalid_argument{
+          fmt::format("key {} does not exist in json.", key)};
+    }
+
+    return std::get<T>(
+        std::get<json_object_t>(m_value).at(fmt::format("\"{}\"", key)));
   }
 
  private:

@@ -15,12 +15,14 @@ target_link_libraries(example
     json
     fmt::fmt
 )
-target_compile_options(example
-  PRIVATE
-    "-fsanitize=address,leak"
-)
-target_link_options(example
-  PRIVATE
-    "-fsanitize=address,leak"
-)
 
+add_executable(wsc)
+target_sources(wsc
+  PRIVATE
+    weather-station-client/main.cpp
+)
+target_link_libraries(wsc
+  PRIVATE
+    json
+    fmt::fmt
+)
