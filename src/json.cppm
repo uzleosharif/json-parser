@@ -136,8 +136,6 @@ export class Json final {
     return std::get<T>(m_value);
   }
 
-  constexpr auto Print() const { fmt::println("{}", m_value); }
-
   constexpr auto Dump() const { return fmt::format("{}", m_value); }
 
  private:
