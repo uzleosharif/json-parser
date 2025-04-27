@@ -459,6 +459,7 @@ auto ParseLargeNumber() {
   fmt::println("\033[31m[DISABLED] ParsingLargeNumber\033[0m");
   return;
 
+  // FIXME: fixed in #6
   fmt::println("testing ParseLargeNumber ...");
   WriteFile(R"(1234567890123456789)");
 
@@ -1022,6 +1023,193 @@ void ContainsApiTestCases() {
   TestContains_NonObjectNull();
   TestContains_EmptyObject();
   TestContains_NonExistingKey();
+}
+
+// Test case 1: Accessing a valid key in an object
+auto TestOperatorSquareBracket_ValidKey() {
+  fmt::println("Testing operator[] - Valid key ...");
+  std::string json = R"({ "name": "John", "age": 30 })";
+  WriteFile(json);
+
+  auto obj = uzleo::json::Parse("/tmp/test.json");
+
+  auto name = obj.GetObjectValue<std::string>("name");
+  if (name != "John") {
+    throw std::runtime_error("Test failed: 'name' should be 'John'.");
+  }
+
+  auto age = obj.GetObjectValue<double>("age");
+  if (age != 30) {
+    throw std::runtime_error("Test failed: 'age' should be 30.");
+  }
+}
+
+// Test case 2: Accessing a missing key
+auto TestOperatorSquareBracket_MissingKey() {
+  fmt::println("Testing operator[] - Missing key ...");
+  std::string json = R"({ "name": "John" })";
+  WriteFile(json);
+
+  auto obj = uzleo::json::Parse("/tmp/test.json");
+
+  try {
+    auto non_existent = obj.GetObjectValue<std::string>("non_existent");
+    throw std::runtime_error(
+        "Test failed: Expected exception for missing key.");
+  } catch (...) {
+    // Expected exception
+  }
+}
+
+// Test case 3: Accessing an object within an object
+auto TestOperatorSquareBracket_NestedObject() {
+  fmt::println(
+      "\033[31m[DISABLED] TestOperatorSquareBracket_NestedObject\033[0m");
+  return;
+
+  // FIXME: fixed in #11
+  // fmt::println("Testing operator[] - Nested object ...");
+  // std::string json = R"({ "user": { "name": "Alice", "id": 1234 } })";
+  // WriteFile(json);
+  //
+  // auto obj = uzleo::json::Parse("/tmp/test.json");
+  //
+  // auto user = obj["user"].template as<uzleo::json::Json>();
+  // auto name = user["name"].template as<std::string>();
+  // auto id = user["id"].template as<int>();
+  //
+  // if (name != "Alice") {
+  //   throw std::runtime_error("Test failed: Nested 'name' should be
+  //   'Alice'.");
+  // }
+  // if (id != 1234) {
+  //   throw std::runtime_error("Test failed: Nested 'id' should be 1234.");
+  // }
+}
+
+// Test case 4: Type mismatch while accessing a key
+auto TestOperatorSquareBracket_TypeMismatch() {
+  fmt::println("Testing operator[] - Type mismatch ...");
+  std::string json = R"({ "count": 42 })";
+  WriteFile(json);
+
+  auto obj = uzleo::json::Parse("/tmp/test.json");
+
+  try {
+    auto count = obj.GetObjectValue<std::string>("count");
+    throw std::runtime_error(
+        "Test failed: Expected exception for type mismatch.");
+  } catch (...) {
+    // Expected exception for type mismatch
+  }
+}
+
+// Test case 5: Accessing a key in a non-object type (e.g., string)
+auto TestOperatorSquareBracket_NonObjectString() {
+  fmt::println("Testing operator[] - Non-object string ...");
+  std::string json = R"("not an object")";
+  WriteFile(json);
+
+  try {
+    auto str = uzleo::json::Parse("/tmp/test.json");
+    std::ignore = str.GetObjectValue<std::string>("key");
+    throw std::runtime_error(
+        "Test failed: Expected exception for non-object string.");
+  } catch (std::logic_error const&) {
+    // Expected exception for non-object access
+  } catch (...) {
+    throw std::runtime_error("Test failed: Unexpected exception type.");
+  }
+}
+
+// Test case 6: Accessing a key in a non-object type (e.g., number)
+auto TestOperatorSquareBracket_NonObjectNumber() {
+  fmt::println("Testing operator[] - Non-object number ...");
+  std::string json = R"(42)";
+  WriteFile(json);
+
+  try {
+    auto num = uzleo::json::Parse("/tmp/test.json");
+    std::ignore = num.GetObjectValue<double>("key");
+    throw std::runtime_error(
+        "Test failed: Expected exception for non-object number.");
+  } catch (std::logic_error const&) {
+    // Expected exception for non-object access
+  } catch (...) {
+    throw std::runtime_error("Test failed: Unexpected exception type.");
+  }
+}
+
+// Test case 7: Accessing a key in a non-object type (e.g., array)
+auto TestOperatorSquareBracket_NonObjectArray() {
+  fmt::println(
+      "\033[31m[DISABLED] TestOperatorSquareBracket_NonObjectArray\033[0m");
+  return;
+
+  // FIXME: fixed as part of #11
+  // fmt::println("Testing operator[] - Non-object array ...");
+  // std::string json = R"([1, 2, 3])";
+  // WriteFile(json);
+  //
+  // try {
+  //   auto arr = uzleo::json::Parse("/tmp/test.json");
+  //   std::ignore = arr["key"];
+  //   throw std::runtime_error(
+  //       "Test failed: Expected exception for non-object array.");
+  // } catch (std::logic_error const&) {
+  //   // Expected exception for non-object access
+  // } catch (...) {
+  //   throw std::runtime_error("Test failed: Unexpected exception type.");
+  // }
+}
+
+// Test case 8: Accessing a key in a non-object type (e.g., boolean)
+auto TestOperatorSquareBracket_NonObjectBoolean() {
+  fmt::println("Testing operator[] - Non-object boolean ...");
+  std::string json = R"(true)";
+  WriteFile(json);
+
+  try {
+    auto bool_val = uzleo::json::Parse("/tmp/test.json");
+    std::ignore = bool_val.GetObjectValue<bool>("key");
+    throw std::runtime_error(
+        "Test failed: Expected exception for non-object boolean.");
+  } catch (std::logic_error const&) {
+    // Expected exception for non-object access
+  } catch (...) {
+    throw std::runtime_error("Test failed: Unexpected exception type.");
+  }
+}
+
+// Test case 9: Accessing a key in a non-object type (e.g., null)
+auto TestOperatorSquareBracket_NonObjectNull() {
+  fmt::println("Testing operator[] - Non-object null ...");
+  std::string json = R"(null)";
+  WriteFile(json);
+
+  try {
+    auto null_val = uzleo::json::Parse("/tmp/test.json");
+    std::ignore = null_val.GetObjectValue<std::monostate>("key");
+    throw std::runtime_error(
+        "Test failed: Expected exception for non-object null.");
+  } catch (std::logic_error const&) {
+    // Expected exception for non-object access
+  } catch (...) {
+    throw std::runtime_error("Test failed: Unexpected exception type.");
+  }
+}
+
+// Function to merge all operator[] test cases
+void OperatorSquareBracketApiTestCases() {
+  TestOperatorSquareBracket_ValidKey();
+  TestOperatorSquareBracket_MissingKey();
+  TestOperatorSquareBracket_NestedObject();
+  TestOperatorSquareBracket_TypeMismatch();
+  TestOperatorSquareBracket_NonObjectString();
+  TestOperatorSquareBracket_NonObjectNumber();
+  TestOperatorSquareBracket_NonObjectArray();
+  TestOperatorSquareBracket_NonObjectBoolean();
+  TestOperatorSquareBracket_NonObjectNull();
 }
 
 }  // namespace

@@ -488,15 +488,18 @@ export [[nodiscard]] constexpr auto Parse(
 //
 // TODOs:
 // *********
-// [ ] access operator
-// [ ] is_root(), is_array(), is_object()
-// [ ] mutability of json object after construction
-// [ ] return references instead of new objects
-// [ ] able to iterate over items
-// [ ] fix disabled tests
-// [ ] doxygen documentation
-// [ ] contains() API
-// [ ] merge Json() constructor with Json(value)
+// [x] 1) access operator
+// [ ] 2) is_root(), is_array(), is_object()
+// [x] 3) mutability of json object after construction
+// [x] 4) return references instead of new objects
+// [ ] 5) able to iterate over items
+// [ ] 6) fix disabled test of ParseLargeNumber
+// [x] 7) doxygen documentation
+// [x] 8) contains() API
+// [x] 9) merge Json() constructor with Json(value)
+//
+// [ ] 10) allow <int> on GetObjectValue() API
+// [ ] 11) get array, map as value in GetObjectValue()
 //
 // Optimization Ideas:
 // **************************
