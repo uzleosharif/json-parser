@@ -29,14 +29,14 @@ auto format_as(json_value_t const& value) -> std::string {
       overloaded{
           []([[maybe_unused]] std::monostate monostate) { return "null"s; },
           [](bool value) { return fmt::format("{}", value); },
-          [](std::string const& value) { return value; },
+          [](std::string const& value) { return fmt::format("\"{}\"", value); },
           [](double value) { return fmt::format("{}", value); },
           [](std::unordered_map<std::string, json_value_t> const& value) {
             std::string result = "{";
             bool first{true};
             for (auto const& [key, val] : value) {
               if (!first) result += ", ";
-              result += fmt::format("{}: {}", key, format_as(val));
+              result += fmt::format("\"{}\": {}", key, format_as(val));
               first = false;
             }
             result += "}";
@@ -145,8 +145,7 @@ export class Json final {
       throw std::logic_error{"json is not an object."};
     }
 
-    return std::get<json_object_t>(m_value).contains(
-        fmt::format("\"{}\"", key));
+    return std::get<json_object_t>(m_value).contains(std::string{key});
   }
 
   template <class T>
@@ -157,8 +156,7 @@ export class Json final {
           fmt::format("key {} does not exist in json.", key)};
     }
 
-    return std::get<T>(
-        std::get<json_object_t>(m_value).at(fmt::format("\"{}\"", key)));
+    return std::get<T>(std::get<json_object_t>(m_value).at(std::string{key}));
   }
 
  private:
@@ -282,7 +280,8 @@ constexpr auto Lex(std::shared_ptr<std::string const>&& json_content_ptr)
           auto const lexeme_with_commas_size{
               rng::distance(rng::begin(tmp_view), json_string_end_iter)};
           token_stream.emplace_back(
-              TokenType::kString, tmp_view.substr(0, lexeme_with_commas_size));
+              TokenType::kString,
+              tmp_view.substr(1, lexeme_with_commas_size - 2));
 
           rng::advance(citer, lexeme_with_commas_size, json_content_end_iter);
           break;
