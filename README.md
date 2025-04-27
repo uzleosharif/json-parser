@@ -23,7 +23,7 @@ $ cmake -B build -S . -DCMAKE_CXX_COMPILER="clang++" -DCMAKE_CXX_FLAGS="-stdlib=
 $ cmake --build build
 
 # run tests
-$ build/test
+$ build/test/test
 ```
 
 ### API Documentation
@@ -32,4 +32,15 @@ generate `doxygen` documentation in `build/doc/html/`
 
 ```bash
 $ python build_apidoc.py
+```
+
+### Use in your project
+```cpp
+import uzleo.json;
+import std;
+
+auto main() -> int {
+  auto json{uzleo::json::Parse("/tmp/test.json")};
+  std::println("{}", json.Dump());
+}
 ```
