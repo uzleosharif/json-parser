@@ -12,6 +12,9 @@ project(uzleo.json
 set(CMAKE_CXX_MODULE_STD ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+option(BUILD_TEST OFF)
+option(BUILD_EXAMPLE OFF)
+
 set(FMT_MODULE ON)
 set(FMT_INSTALL OFF)
 add_subdirectory(deps/fmt/)
@@ -22,5 +25,11 @@ set_target_properties(fmt
 )
 
 add_subdirectory(src/)
-add_subdirectory(test/)
-add_subdirectory(example/)
+
+if(BUILD_TEST)
+  add_subdirectory(test/)
+endif()
+
+if(BUILD_EXAMPLE)
+  add_subdirectory(example/)
+endif()
