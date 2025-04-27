@@ -450,7 +450,21 @@ export [[nodiscard]] constexpr auto Parse(
 }  // namespace uzleo::json
 
 //
+//
+//
+// TODOs:
+// *********
+// [ ] access operator
+// [ ] is_root(), is_array(), is_object()
+// [ ] mutability of json object after construction
+// [ ] return references instead of new objects
+// [ ] able to iterate over items
+// [ ] fix disabled tests
+// [ ] doxygen documentation
+// [ ] contains() API
+//
 // Optimization Ideas:
+// **************************
 // [x] remove temporarry string between ReadFile() and Lex()
 // and instead use istream_view .. make ifstream object
 // static to extend lifetime [ ] noexcept of functions
@@ -467,5 +481,3 @@ export [[nodiscard]] constexpr auto Parse(
 //
 // [ ] disable copy operations on json_value_t
 //
-// TODOs:
-// [ ] mutability of json object after construction
