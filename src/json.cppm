@@ -122,6 +122,9 @@ auto format_as(Token const& token) -> std::string {
 namespace uzleo::json {
 
 export class Json final {
+  using json_object_t = std::unordered_map<std::string, json_value_t>;
+  using json_array_t = std::vector<json_value_t>;
+
  public:
   constexpr Json() = default;
   constexpr explicit Json(auto const& value) : m_value{value} {}
@@ -138,6 +141,20 @@ export class Json final {
 
   /// formats the internal json representation into a string
   constexpr auto Dump() const { return fmt::format("{}", m_value); }
+
+  /// check if the json object contains a specific key
+  /// @return true if key exists, false otherwise
+  /// @throws std::logic_error if called on a non-object json instance
+  [[nodiscard]] constexpr auto Contains(std::string_view key) const -> bool {
+    if (not std::holds_alternative<json_object_t>(m_value)) {
+      throw std::logic_error{"json is not an object."};
+    }
+
+    std::reference_wrapper<json_object_t const> json_object_ref{
+        std::get<json_object_t>(m_value)};
+    return json_object_ref.get().contains(
+        fmt::format("\"{}\"", std::string{key}));
+  }
 
  private:
   json_value_t m_value{};

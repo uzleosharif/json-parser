@@ -865,6 +865,165 @@ auto NegativeTestCases() {
   fmt::println("");
 }
 
+// Test case 1: Key exists in an object
+auto TestContains_KeyExists() {
+  fmt::println("Testing Contains - Key exists ...");
+  std::string json = R"({ "key1": 42, "key2": "value" })";
+  WriteFile(json);
+
+  auto obj = uzleo::json::Parse("/tmp/test.json");
+
+  if (obj.Contains("key1") != true) {
+    throw std::runtime_error("Test failed: 'key1' should exist.");
+  }
+  if (obj.Contains("key2") != true) {
+    throw std::runtime_error("Test failed: 'key2' should exist.");
+  }
+}
+
+// Test case 2: Key does not exist in an object
+auto TestContains_KeyDoesNotExist() {
+  fmt::println("Testing Contains - Key does not exist ...");
+  std::string json = R"({ "key1": 42 })";
+  WriteFile(json);
+
+  auto obj = uzleo::json::Parse("/tmp/test.json");
+
+  if (obj.Contains("keyX") != false) {
+    throw std::runtime_error("Test failed: 'keyX' should not exist.");
+  }
+}
+
+// Test case 3: Calling Contains() on a non-object (string)
+auto TestContains_NonObjectString() {
+  fmt::println("Testing Contains - Non-object string ...");
+  std::string json = R"("not an object")";
+  WriteFile(json);
+
+  try {
+    auto str = uzleo::json::Parse("/tmp/test.json");
+    std::ignore = str.Contains("any_key");
+    throw std::runtime_error(
+        "Test failed: Expected std::logic_error for non-object string.");
+  } catch (std::logic_error const&) {
+    // Expected exception
+  } catch (...) {
+    throw std::runtime_error("Test failed: Unexpected exception type.");
+  }
+}
+
+// Test case 4: Calling Contains() on a non-object (number)
+auto TestContains_NonObjectNumber() {
+  fmt::println("Testing Contains - Non-object number ...");
+  std::string json = R"(42)";
+  WriteFile(json);
+
+  try {
+    auto num = uzleo::json::Parse("/tmp/test.json");
+    std::ignore = num.Contains("any_key");
+    throw std::runtime_error(
+        "Test failed: Expected std::logic_error for non-object number.");
+  } catch (std::logic_error const&) {
+    // Expected exception
+  } catch (...) {
+    throw std::runtime_error("Test failed: Unexpected exception type.");
+  }
+}
+
+// Test case 5: Calling Contains() on a non-object (array)
+auto TestContains_NonObjectArray() {
+  fmt::println("Testing Contains - Non-object array ...");
+  std::string json = R"([1, 2, 3])";
+  WriteFile(json);
+
+  try {
+    auto arr = uzleo::json::Parse("/tmp/test.json");
+    std::ignore = arr.Contains("any_key");
+    throw std::runtime_error(
+        "Test failed: Expected std::logic_error for non-object array.");
+  } catch (std::logic_error const&) {
+    // Expected exception
+  } catch (...) {
+    throw std::runtime_error("Test failed: Unexpected exception type.");
+  }
+}
+
+// Test case 6: Calling Contains() on a non-object (boolean)
+auto TestContains_NonObjectBoolean() {
+  fmt::println("Testing Contains - Non-object boolean ...");
+  std::string json = R"(true)";
+  WriteFile(json);
+
+  try {
+    auto bool_val = uzleo::json::Parse("/tmp/test.json");
+    std::ignore = bool_val.Contains("any_key");
+    throw std::runtime_error(
+        "Test failed: Expected std::logic_error for non-object boolean.");
+  } catch (std::logic_error const&) {
+    // Expected exception
+  } catch (...) {
+    throw std::runtime_error("Test failed: Unexpected exception type.");
+  }
+}
+
+// Test case 7: Calling Contains() on a non-object (null)
+auto TestContains_NonObjectNull() {
+  fmt::println("Testing Contains - Non-object null ...");
+  std::string json = R"(null)";
+  WriteFile(json);
+
+  try {
+    auto null_val = uzleo::json::Parse("/tmp/test.json");
+    std::ignore = null_val.Contains("any_key");
+    throw std::runtime_error(
+        "Test failed: Expected std::logic_error for non-object null.");
+  } catch (std::logic_error const&) {
+    // Expected exception
+  } catch (...) {
+    throw std::runtime_error("Test failed: Unexpected exception type.");
+  }
+}
+
+// Test case 8: Calling Contains() on an empty object
+auto TestContains_EmptyObject() {
+  fmt::println("Testing Contains - Empty object ...");
+  std::string json = R"({})";
+  WriteFile(json);
+
+  auto obj = uzleo::json::Parse("/tmp/test.json");
+
+  if (obj.Contains("any_key") != false) {
+    throw std::runtime_error(
+        "Test failed: Empty object should return false for any key.");
+  }
+}
+
+// Negative Test Case: Contains() with non-existing key
+auto TestContains_NonExistingKey() {
+  fmt::println("Testing Contains - Non-existing key ...");
+  std::string json = R"({ "key1": 42 })";
+  WriteFile(json);
+
+  auto obj = uzleo::json::Parse("/tmp/test.json");
+
+  if (obj.Contains("keyX") != false) {
+    throw std::runtime_error("Test failed: 'keyX' should not exist.");
+  }
+}
+
+// Function to merge all test cases
+void ContainsApiTestCases() {
+  TestContains_KeyExists();
+  TestContains_KeyDoesNotExist();
+  TestContains_NonObjectString();
+  TestContains_NonObjectNumber();
+  TestContains_NonObjectArray();
+  TestContains_NonObjectBoolean();
+  TestContains_NonObjectNull();
+  TestContains_EmptyObject();
+  TestContains_NonExistingKey();
+}
+
 }  // namespace
 
 auto main() -> int {
@@ -883,6 +1042,9 @@ auto main() -> int {
 
     fmt::println("*** Testing NegativeCases ***");
     NegativeTestCases();
+
+    fmt::println("*** Testing ContainsAPI ***");
+    ContainsApiTestCases();
 
     fmt::println("-----------");
     fmt::println("all tests passed.");
