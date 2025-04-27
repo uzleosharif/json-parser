@@ -149,22 +149,6 @@ export class Json final {
 };
 
 constexpr auto ReadFile(std::filesystem::path&& absolute_file_path)
-    -> std::optional<std::shared_ptr<std::string const>>;
-constexpr auto Lex(std::shared_ptr<std::string const>&& json_content_ptr)
-    -> std::tuple<std::shared_ptr<std::string const>, TokenStream>;
-constexpr auto ParseTokens(std::tuple<std::shared_ptr<std::string const>,
-                                      TokenStream>&& token_stream_with_buffer)
-    -> Json;
-
-export [[nodiscard]] constexpr auto Parse(
-    std::filesystem::path&& absolute_file_path) -> Json {
-  return ReadFile(std::move(absolute_file_path))
-      .transform(Lex)
-      .transform(ParseTokens)
-      .value();
-}
-
-constexpr auto ReadFile(std::filesystem::path&& absolute_file_path)
     -> std::optional<std::shared_ptr<std::string const>> {
   if (not std::filesystem::exists(absolute_file_path)) {
     throw std::invalid_argument{
@@ -453,6 +437,14 @@ constexpr auto ParseTokens(std::tuple<std::shared_ptr<std::string const>,
   }};
 
   return parse(std::get<TokenStream>(token_stream_with_buffer)).first;
+}
+
+export [[nodiscard]] constexpr auto Parse(
+    std::filesystem::path&& absolute_file_path) -> Json {
+  return ReadFile(std::move(absolute_file_path))
+      .transform(Lex)
+      .transform(ParseTokens)
+      .value();
 }
 
 }  // namespace uzleo::json
