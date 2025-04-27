@@ -625,6 +625,194 @@ auto NonTrivialCases() {
   fmt::println("");
 }
 
+auto ParseMissingClosingBraceObject() {
+  // setup
+  fmt::println("testing ParseMissingClosingBraceObject ...");
+  WriteFile(R"(
+  { "key": "value"
+  )");
+
+  // invoke api
+  try {
+    auto json = uzleo::json::Parse(kFilePath);
+    throw std::runtime_error(
+        "Expected exception for missing closing brace, but got valid JSON.");
+  } catch (...) {
+    // Expected exception, nothing to do here
+  }
+}
+
+auto ParseExtraCommaInArray() {
+  // setup
+  fmt::println("testing ParseExtraCommaInArray ...");
+  WriteFile(R"(
+  [1, 2, 3,]
+  )");
+
+  // invoke api
+  try {
+    auto json = uzleo::json::Parse(kFilePath);
+    throw std::runtime_error(
+        "Expected exception for extra comma, but got valid JSON.");
+  } catch (...) {
+    // Expected exception, nothing to do here
+  }
+}
+
+auto ParseUnescapedQuotesInString() {
+  // setup
+  fmt::println("testing ParseUnescapedQuotesInString ...");
+  WriteFile(R"(
+  "This is an invalid string " with unescaped quotes"
+  )");
+
+  // invoke api
+  try {
+    auto json = uzleo::json::Parse(kFilePath);
+    throw std::runtime_error(
+        "Expected exception for unescaped quotes, but got valid JSON.");
+  } catch (...) {
+    // Expected exception, nothing to do here
+  }
+}
+
+auto ParseInvalidNumberFormat() {
+  // setup
+  fmt::println("testing ParseInvalidNumberFormat ...");
+  WriteFile(R"(
+  3.14.15
+  )");
+
+  // invoke api
+  try {
+    auto json = uzleo::json::Parse(kFilePath);
+    throw std::runtime_error(
+        "Expected exception for invalid number format, but got valid JSON.");
+  } catch (...) {
+    // Expected exception, nothing to do here
+  }
+}
+
+auto ParseUnmatchedQuotesAroundKey() {
+  // setup
+  fmt::println("testing ParseUnmatchedQuotesAroundKey ...");
+  WriteFile(R"(
+  { key: "value" }
+  )");
+
+  // invoke api
+  try {
+    auto json = uzleo::json::Parse(kFilePath);
+    throw std::runtime_error(
+        "Expected exception for unmatched quotes around key, but got valid "
+        "JSON.");
+  } catch (...) {
+    // Expected exception, nothing to do here
+  }
+}
+
+auto ParseTrailingCommaInObject() {
+  // setup
+  fmt::println("testing ParseTrailingCommaInObject ...");
+  WriteFile(R"(
+  { "key1": "value1", "key2": "value2", }
+  )");
+
+  // invoke api
+  try {
+    auto json = uzleo::json::Parse(kFilePath);
+    throw std::runtime_error(
+        "Expected exception for trailing comma in object, but got valid JSON.");
+  } catch (...) {
+    // Expected exception, nothing to do here
+  }
+}
+
+auto ParseEmptyKeyInObject() {
+  // setup
+  fmt::println("testing ParseEmptyKeyInObject ...");
+  WriteFile(R"(
+  { "": "value" }
+  )");
+
+  // invoke api
+  try {
+    auto json = uzleo::json::Parse(kFilePath);
+    throw std::runtime_error(
+        "Expected exception for empty key in object, but got valid JSON.");
+  } catch (...) {
+    // Expected exception, nothing to do here
+  }
+}
+
+auto ParseInvalidBooleanValue() {
+  // setup
+  fmt::println("testing ParseInvalidBooleanValue ...");
+  WriteFile(R"(
+  { "key": maybe }
+  )");
+
+  // invoke api
+  try {
+    auto json = uzleo::json::Parse(kFilePath);
+    throw std::runtime_error(
+        "Expected exception for invalid boolean value, but got valid JSON.");
+  } catch (...) {
+    // Expected exception, nothing to do here
+  }
+}
+
+auto ParseMissingColon() {
+  // setup
+  fmt::println("testing ParseMissingColon ...");
+  WriteFile(R"(
+  { "key" "value" }
+  )");
+
+  // invoke api
+  try {
+    auto json = uzleo::json::Parse(kFilePath);
+    throw std::runtime_error(
+        "Expected exception for missing colon between key and value, but got "
+        "valid JSON.");
+  } catch (...) {
+    // Expected exception, nothing to do here
+  }
+}
+
+auto ParseInvalidNullValue() {
+  // setup
+  fmt::println("testing ParseInvalidNullValue ...");
+  WriteFile(R"(
+  nullxyz
+  )");
+
+  // invoke api
+  try {
+    auto json = uzleo::json::Parse(kFilePath);
+    throw std::runtime_error(
+        "Expected exception for invalid null value, but got valid JSON.");
+  } catch (...) {
+    // Expected exception, nothing to do here
+  }
+}
+
+auto NegativeTestCases() {
+  // Call each invalid test case and expect an exception to be thrown
+  ParseMissingClosingBraceObject();
+  ParseExtraCommaInArray();
+  ParseUnescapedQuotesInString();
+  ParseInvalidNumberFormat();
+  ParseUnmatchedQuotesAroundKey();
+  ParseTrailingCommaInObject();
+  ParseEmptyKeyInObject();
+  ParseInvalidBooleanValue();
+  ParseMissingColon();
+  ParseInvalidNullValue();
+
+  fmt::println("");
+}
+
 }  // namespace
 
 auto main() -> int {
@@ -640,6 +828,9 @@ auto main() -> int {
 
     fmt::println("*** Testing NonTrivialCases ***");
     NonTrivialCases();
+
+    fmt::println("*** Testing NegativeCases ***");
+    NegativeTestCases();
 
     fmt::println("-----------");
     fmt::println("all tests passed.");
