@@ -126,18 +126,13 @@ export class Json final {
   using json_array_t = std::vector<json_value_t>;
 
  public:
-  constexpr Json() = default;
   constexpr explicit Json(auto const& value) : m_value{value} {}
+
   constexpr Json(Json&& other) = default;
   constexpr Json& operator=(Json&& other) = default;
   constexpr ~Json() = default;
   Json(Json const&) = delete;
   Json& operator=(Json const&) = delete;
-
-  template <class T>
-  [[nodiscard]] constexpr auto GetValue() -> T const& {
-    return std::get<T>(m_value);
-  }
 
   /// formats the internal json representation into a string
   constexpr auto Dump() const { return fmt::format("{}", m_value); }
@@ -157,12 +152,23 @@ export class Json final {
   }
 
  private:
-  json_value_t m_value{};
+  json_value_t m_value;
 
-  friend constexpr auto GetRawValue(Json const& json) -> json_value_t const& {
-    return json.m_value;
+  template <class T>
+  [[nodiscard]] constexpr auto GetValue() -> T const& {
+    return std::get<T>(m_value);
   }
+
+  friend constexpr auto GetRawValue(Json const& json) -> json_value_t const&;
+
+  friend constexpr auto ParseTokens(
+      std::tuple<std::shared_ptr<std::string const>, TokenStream>&&
+          token_stream_with_buffer) -> Json;
 };
+
+constexpr auto GetRawValue(Json const& json) -> json_value_t const& {
+  return json.m_value;
+}
 
 /// this allocates the string buffer (holding json) data on heap so that it is
 /// alive throughout the program. This allows views over it to be used for
@@ -332,7 +338,7 @@ constexpr auto ParseTokens(std::tuple<std::shared_ptr<std::string const>,
           "Recursive parse called with empty token-stream.");
     }
 
-    Json ret_json{};
+    Json ret_json{std::monostate{}};
     // switch is responsible for creating the json instance that will be
     // returned as .first
     switch (token_stream_span.front().type) {
