@@ -71,4 +71,12 @@ target_link_libraries(test
     json
     fmt::fmt
 )
+target_compile_options(test
+  PRIVATE
+    "-fsanitize=address,leak"
+)
+target_link_options(test
+  PRIVATE
+    "-fsanitize=address,leak"
+)
 
