@@ -616,11 +616,63 @@ auto ParseInvalidJson() {
   }
 }
 
+auto ParseDeeplyNestedJson() {
+  // setup
+  fmt::println("testing ParseDeeplyNestedJson ...");
+  std::string large_json = R"({
+    "level1": {
+      "level2": {
+        "level3": {
+          "level4": {
+            "level5": {
+              "key": "value"
+            }
+          }
+        }
+      }
+    }
+  })";
+  WriteFile(large_json);
+
+  // invoke api
+  auto json = uzleo::json::Parse(kFilePath);
+
+  // verify
+  auto njson = nlohmann::json::parse(json.Dump());
+  if (not njson.is_object()) {
+    throw std::runtime_error("json is not object.");
+  }
+  if (not njson["level1"].is_object()) {
+    throw std::runtime_error("level1 is not object.");
+  }
+  if (not njson["level1"]["level2"].is_object()) {
+    throw std::runtime_error("level2 is not object.");
+  }
+  if (not njson["level1"]["level2"]["level3"].is_object()) {
+    throw std::runtime_error("level3 is not object.");
+  }
+  if (not njson["level1"]["level2"]["level3"]["level4"].is_object()) {
+    throw std::runtime_error("level4 is not object.");
+  }
+  if (not njson["level1"]["level2"]["level3"]["level4"]["level5"].is_object()) {
+    throw std::runtime_error("level5 is not object.");
+  }
+  if (not njson["level1"]["level2"]["level3"]["level4"]["level5"].contains(
+          "key")) {
+    throw std::runtime_error("key does not exist.");
+  }
+  if (njson["level1"]["level2"]["level3"]["level4"]["level5"]["key"] !=
+      "value") {
+    throw std::runtime_error("value is wrong.");
+  }
+}
+
 auto NonTrivialCases() {
   ParseMixedTypes();
   ParseLargeJson();
   ParseNestedArrays();
   ParseInvalidJson();
+  ParseDeeplyNestedJson();
 
   fmt::println("");
 }
