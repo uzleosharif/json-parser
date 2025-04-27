@@ -6,6 +6,7 @@
 
 
 add_library(json)
+add_library(uzleo::json ALIAS json)
 target_sources(json
   PUBLIC
     FILE_SET modules
@@ -28,4 +29,3 @@ target_compile_options(json
     "-Wpedantic"
     "-Werror"
 )
-
