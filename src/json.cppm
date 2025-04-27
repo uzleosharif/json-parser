@@ -241,7 +241,19 @@ constexpr auto Lex(std::shared_ptr<std::string const>&& json_content_ptr)
       case '"': {
         if (auto json_string_end_iter{rng::find_if(
                 rng::next(rng::begin(tmp_view), 1, rng::end(tmp_view)),
-                rng::end(tmp_view), [](char c) { return (c == '"'); })};
+                rng::end(tmp_view),
+                [escaped = false](char c) mutable {
+                  if (escaped) {
+                    escaped = false;
+                    return false;
+                  }
+                  if (c == '\\') {
+                    escaped = true;
+                    return false;
+                  }
+
+                  return (c == '"');
+                })};
             json_string_end_iter != rng::end(tmp_view)) {
           rng::advance(json_string_end_iter, 1, rng::end(tmp_view));
 
