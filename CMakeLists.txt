@@ -12,14 +12,14 @@ project(uzleo.json
 set(CMAKE_CXX_MODULE_STD ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-find_package(fmt CONFIG REQUIRED)
-set_target_properties(fmt::fmt
+set(FMT_MODULE ON)
+set(FMT_INSTALL OFF)
+add_subdirectory(deps/fmt/)
+set_target_properties(fmt
   PROPERTIES
     CXX_STANDARD 26
     CXX_STANDARD_REQUIRED ON
 )
-
-
 
 add_subdirectory(src/)
 add_subdirectory(test/)

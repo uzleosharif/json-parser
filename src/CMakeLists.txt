@@ -13,7 +13,7 @@ target_sources(json
       FILES json.cppm
 )
 target_compile_features(json
-  PUBLIC
+  PRIVATE
     cxx_std_26
 )
 target_link_libraries(json

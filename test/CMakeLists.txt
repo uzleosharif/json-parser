@@ -18,5 +18,8 @@ target_link_options(test
   PRIVATE
     "-fsanitize=address,leak"
 )
-
+target_compile_features(test
+  PRIVATE
+    cxx_std_26
+)
 
