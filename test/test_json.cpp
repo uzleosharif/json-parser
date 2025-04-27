@@ -193,6 +193,8 @@ auto SimplePositiveCases() {
   ParseStringRoot();
   ParseNumberRoot();
   ParseBooleanRoot();
+
+  fmt::println("");
 }
 
 auto ParseObjectWithMultiplePairs() {
@@ -372,6 +374,8 @@ auto SimpleCompositionPositiveCases() {
   ParseNestedObject();
   ParseObjectWithArrayValue();
   ParseArrayOfObjects();
+
+  fmt::println("");
 }
 
 auto ParseEmptyKeyObject() {
@@ -488,6 +492,137 @@ auto EdgeCasePositiveCases() {
   ParseUnicodeString();
   ParseLargeNumber();
   ParseBooleanNullArray();
+
+  fmt::println("");
+}
+
+auto ParseMixedTypes() {
+  // setup
+  fmt::println("testing ParseMixedTypes ...");
+  WriteFile(R"(
+  {
+    "string": "hello",
+    "number": 42,
+    "boolean": true,
+    "null_value": null
+  }
+  )");
+
+  // invoke api
+  auto json = uzleo::json::Parse(kFilePath);
+
+  // verify
+  auto njson = nlohmann::json::parse(json.Dump());
+  if (not njson.is_object()) {
+    throw std::runtime_error("json is not object.");
+  }
+  if (njson["string"] != "hello") {
+    throw std::runtime_error("string value is wrong.");
+  }
+  if (njson["number"] != 42) {
+    throw std::runtime_error("number value is wrong.");
+  }
+  if (njson["boolean"] != true) {
+    throw std::runtime_error("boolean value is wrong.");
+  }
+  if (not njson["null_value"].is_null()) {
+    throw std::runtime_error("null value is wrong.");
+  }
+}
+
+auto ParseLargeJson() {
+  // setup
+  fmt::println("testing ParseLargeJson ...");
+  std::string large_json = R"({ "data": [)";
+
+  // Generate a valid JSON string
+  for (int i = 0; i < 1000; ++i) {
+    // Add the item to the JSON array
+    large_json += fmt::format("{{\"index\": {}}}", i);
+
+    // Add a comma if this is not the last element
+    if (i < 999) {
+      large_json += ",";
+    }
+  }
+
+  large_json += "]}";  // Close the array and the object
+
+  // Write to the file
+  WriteFile(large_json);
+
+  // invoke api
+  auto json = uzleo::json::Parse(kFilePath);
+
+  // verify
+  auto njson = nlohmann::json::parse(json.Dump());
+  if (not njson.is_object()) {
+    throw std::runtime_error("json is not object.");
+  }
+  if (not njson.contains("data")) {
+    throw std::runtime_error("data key does not exist.");
+  }
+  if (not njson["data"].is_array()) {
+    throw std::runtime_error("data is not array.");
+  }
+  if (njson["data"].size() != 1000) {
+    throw std::runtime_error("data size is incorrect.");
+  }
+}
+
+auto ParseNestedArrays() {
+  // setup
+  fmt::println("testing ParseNestedArrays ...");
+  WriteFile(R"(
+  {
+    "array_of_arrays": [[1, 2], [3, 4], [5, 6]]
+  }
+  )");
+
+  // invoke api
+  auto json = uzleo::json::Parse(kFilePath);
+
+  // verify
+  auto njson = nlohmann::json::parse(json.Dump());
+  if (not njson.is_object()) {
+    throw std::runtime_error("json is not object.");
+  }
+  if (not njson.contains("array_of_arrays")) {
+    throw std::runtime_error("array_of_arrays key does not exist.");
+  }
+  if (not njson["array_of_arrays"].is_array()) {
+    throw std::runtime_error("array_of_arrays is not array.");
+  }
+  if (njson["array_of_arrays"].size() != 3) {
+    throw std::runtime_error("array size is wrong.");
+  }
+  if (njson["array_of_arrays"][0] != nlohmann::json::array({1, 2})) {
+    throw std::runtime_error("nested array content is wrong.");
+  }
+}
+
+auto ParseInvalidJson() {
+  // setup
+  fmt::println("testing ParseInvalidJson ...");
+  WriteFile(R"(
+  { "key": "value", }
+  )");
+
+  // invoke api
+  try {
+    auto json = uzleo::json::Parse(kFilePath);
+    throw std::runtime_error("Invalid JSON should have thrown an exception.");
+  } catch (...) {
+  }
+}
+
+auto NonTrivialCases() {
+  ParseMixedTypes();
+  ParseLargeJson();
+  ParseNestedArrays();
+  ParseInvalidJson();
+
+  fmt::println("");
 }
 
 }  // namespace
@@ -502,6 +637,9 @@ auto main() -> int {
 
     fmt::println("*** Testing EdgeCasePositiveTestCases ***");
     EdgeCasePositiveCases();
+
+    fmt::println("*** Testing NonTrivialCases ***");
+    NonTrivialCases();
 
     fmt::println("-----------");
     fmt::println("all tests passed.");
