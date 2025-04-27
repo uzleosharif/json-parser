@@ -136,6 +136,7 @@ export class Json final {
     return std::get<T>(m_value);
   }
 
+  /// formats the internal json representation into a string
   constexpr auto Dump() const { return fmt::format("{}", m_value); }
 
  private:
