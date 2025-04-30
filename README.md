@@ -43,4 +43,25 @@ auto main() -> int {
   auto json{uzleo::json::Parse("/tmp/test.json")};
   std::println("{}", json.Dump());
 }
+
+
+### non-cmake approach
+
+
 ```
+# build std.pcm, fmt.pcm/o and json.pcm/o
+$ mkdir -p build/uzleo
+$ clang++ -std=c++26 -stdlib=libc++ -O3 <your-path-to-libc++>/v1/std.cppm --precompile -o build/std.pcm
+$ clang++ -std=c++26 -stdlib=libc++ -O3 deps/fmt/src/fmt.cppm -fmodule-output -c -o build/fmt.o
+$ clang++ -std=c++26 -stdlib=libc++ -O3 src/json.cppm -fmodule-file=std=build/std.pcm -fmodule-file=fmt=build/fmt.pcm -fmodule-output -c -o build/uzleo/json.o
+
+# create lib archive
+$ ar r build/uzleo/libjson.a lib/fmt.o lib/uzleo/json.o
+
+# install std.pcm, fmt.pcm, json.pcm, libjson.a
+$ cp build/std.pcm build/fmt.pcm build/uzleo/json.pcm build/uzleo/libjson.a install/.
+
+# consume at client
+$ clang++ -std=c++26 -stdlib=libc++ -O3 test.cpp -fmodule-file=uzleo.json=install/uzleo/json.cppm -fmodule-file=fmt=install/fmt.pcm -fmodule-file=std=install/std.pcm -o test -ljson -L install/
+```
+
