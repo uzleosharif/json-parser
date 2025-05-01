@@ -1,0 +1,10 @@
+{
+  "src": [
+    "src/json.cppm"
+  ],
+  "imp": [
+    "std",
+    "fmt"
+  ],
+  "a": "json"
+}
