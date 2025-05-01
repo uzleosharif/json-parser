@@ -18,8 +18,8 @@ target_compile_features(json
     cxx_std_26
 )
 target_link_libraries(json
-  PRIVATE
-    fmt::fmt
+  PUBLIC
+    fmt
 )
 target_compile_options(json
   PRIVATE

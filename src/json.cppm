@@ -15,47 +15,6 @@ struct overloaded : Ts... {
   using Ts::operator()...;
 };
 
-struct json_value_t
-    : std::variant<bool, double, std::monostate, std::string,
-                   std::unordered_map<std::string, json_value_t>,
-                   std::vector<json_value_t>> {
-  using variant::variant;
-};
-
-auto format_as(json_value_t const& value) -> std::string {
-  using namespace std::string_literals;
-
-  return std::visit(
-      overloaded{
-          []([[maybe_unused]] std::monostate monostate) { return "null"s; },
-          [](bool value) { return fmt::format("{}", value); },
-          [](std::string const& value) { return fmt::format("\"{}\"", value); },
-          [](double value) { return fmt::format("{}", value); },
-          [](std::unordered_map<std::string, json_value_t> const& value) {
-            std::string result = "{";
-            bool first{true};
-            for (auto const& [key, val] : value) {
-              if (!first) result += ", ";
-              result += fmt::format("\"{}\": {}", key, format_as(val));
-              first = false;
-            }
-            result += "}";
-            return result;
-          },
-          [](std::vector<json_value_t> const& value) {
-            std::string result = "[";
-            bool first{true};
-            for (auto const& v : value) {
-              if (!first) result += ", ";
-              result += format_as(v);
-              first = false;
-            }
-            result += "]";
-            return result;
-          }},
-      value);
-}
-
 enum class TokenType {
   kLeftBrace,
   kRightBrace,
@@ -122,11 +81,16 @@ auto format_as(Token const& token) -> std::string {
 namespace uzleo::json {
 
 export class Json final {
-  using json_object_t = std::unordered_map<std::string, json_value_t>;
-  using json_array_t = std::vector<json_value_t>;
-
  public:
-  constexpr explicit Json(auto const& value) : m_value{value} {}
+  using json_object_t = std::unordered_map<std::string, Json>;
+  using json_array_t = std::vector<Json>;
+
+  constexpr explicit Json(bool value) : m_value{value} {}
+  constexpr explicit Json(double value) : m_value{value} {}
+  constexpr explicit Json(std::monostate monostate) : m_value{monostate} {}
+  constexpr explicit Json(std::string&& value) : m_value{std::move(value)} {}
+  constexpr explicit Json(json_object_t&& value) : m_value{std::move(value)} {}
+  constexpr explicit Json(json_array_t&& value) : m_value{std::move(value)} {}
 
   constexpr Json(Json&& other) = default;
   constexpr Json& operator=(Json&& other) = default;
@@ -135,7 +99,7 @@ export class Json final {
   Json& operator=(Json const&) = delete;
 
   /// formats the internal json representation into a string
-  constexpr auto Dump() const { return fmt::format("{}", m_value); }
+  constexpr auto Dump() const { return fmt::format("{}", *this); }
 
   /// check if the json object contains a specific key
   /// @return true if key exists, false otherwise
@@ -148,34 +112,97 @@ export class Json final {
     return std::get<json_object_t>(m_value).contains(std::string{key});
   }
 
+  // template <class T>
+  // [[nodiscard]] constexpr auto GetObjectValue(std::string_view key) const
+  //     -> T const& {
+  //   if (not Contains(key)) {
+  //     throw std::invalid_argument{
+  //         fmt::format("key {} does not exist in json.", key)};
+  //   }
+  //
+  //   return
+  //   std::get<T>(std::get<json_object_t>(m_value).at(std::string{key}));
+  // }
+
+  // // TODO(): is there a way to optimize it by using some reference trickery
+  // // instead of value-semantics
+  // [[nodiscard]] constexpr auto ExtractArray(std::string_view key) const
+  //     -> std::vector<Json> {
+  //   if (not Contains(key)) {
+  //     throw std::invalid_argument{
+  //         fmt::format("key {} does not exist in json.", key)};
+  //   }
+  //
+  //   if (not IsArray()) {
+  //     throw std::invalid_argument{"value is not an array type."};
+  //   }
+  //
+  //   for (auto const& sub_json : std::get<json_array_t>(m_value)) {
+  //     //
+  //   }
+  //   return {};
+  // }
+  //
+  // [[nodiscard]] constexpr auto IsArray() const -> bool {
+  //   return std::holds_alternative<json_array_t>(m_value);
+  // }
+
   template <class T>
-  [[nodiscard]] constexpr auto GetObjectValue(std::string_view key) const
-      -> T const& {
-    if (not Contains(key)) {
-      throw std::invalid_argument{
-          fmt::format("key {} does not exist in json.", key)};
+  [[nodiscard]] constexpr auto IsType() const -> bool {
+    return std::holds_alternative<T>(m_value);
+  }
+
+  [[nodiscard]] constexpr auto GetStringView() const -> std::string_view {
+    if (not IsType<std::string>()) {
+      throw std::invalid_argument("does not contain string value.");
     }
 
-    return std::get<T>(std::get<json_object_t>(m_value).at(std::string{key}));
+    return std::string_view{std::get<std::string>(m_value)};
   }
 
  private:
+  struct json_value_t : std::variant<bool, double, std::monostate, std::string,
+                                     json_object_t, json_array_t> {
+    using variant::variant;
+  };
+
   json_value_t m_value;
 
-  template <class T>
-  [[nodiscard]] constexpr auto GetValue() -> T const& {
-    return std::get<T>(m_value);
-  }
-
-  friend constexpr auto GetRawValue(Json const& json) -> json_value_t const&;
-
-  friend constexpr auto ParseTokens(
-      std::tuple<std::shared_ptr<std::string const>, TokenStream>&&
-          token_stream_with_buffer) -> Json;
+  friend constexpr auto format_as(Json const& json) -> std::string;
 };
 
-constexpr auto GetRawValue(Json const& json) -> json_value_t const& {
-  return json.m_value;
+constexpr auto format_as(Json const& json) -> std::string {
+  using namespace std::string_literals;
+
+  return std::visit(
+      overloaded{
+          []([[maybe_unused]] std::monostate monostate) { return "null"s; },
+          [](bool value) { return fmt::format("{}", value); },
+          [](std::string const& value) { return fmt::format("\"{}\"", value); },
+          [](double value) { return fmt::format("{}", value); },
+          [](Json::json_object_t const& value) {
+            std::string result = "{";
+            bool first{true};
+            for (auto const& [key, val] : value) {
+              if (!first) result += ", ";
+              result += fmt::format("\"{}\": {}", key, format_as(val));
+              first = false;
+            }
+            result += "}";
+            return result;
+          },
+          [](Json::json_array_t const& value) {
+            std::string result = "[";
+            bool first{true};
+            for (auto const& val : value) {
+              if (!first) result += ", ";
+              result += format_as(val);
+              first = false;
+            }
+            result += "]";
+            return result;
+          }},
+      json.m_value);
 }
 
 /// this allocates the string buffer (holding json) data on heap so that it is
@@ -354,24 +381,23 @@ constexpr auto ParseTokens(std::tuple<std::shared_ptr<std::string const>,
       case kLeftBrace: {
         token_stream_span = token_stream_span.subspan(1);
 
-        std::unordered_map<std::string, json_value_t> sub_json{};
+        Json::json_object_t inner_json{};
         while (true) {
           if (token_stream_span.front().type == kRightBrace) {
-            ret_json = Json{sub_json};
+            ret_json = Json{std::move(inner_json)};
             break;
           }
 
           if (token_stream_span.at(0).type == kString and
               token_stream_span.at(1).type == kColon) {
-            auto sub_json_element_key =
-                self(token_stream_span).first.template GetValue<std::string>();
-            token_stream_span = token_stream_span.subspan(2);
+            auto const parse_result_key{self(token_stream_span)};
+            token_stream_span = parse_result_key.second.subspan(1);
 
-            auto [json_returned, advanced_subspan] = self(token_stream_span);
-            auto sub_json_element_value = GetRawValue(json_returned);
-            token_stream_span = advanced_subspan;
-
-            sub_json.emplace(sub_json_element_key, sub_json_element_value);
+            auto parse_result_value = self(token_stream_span);
+            inner_json.emplace(
+                parse_result_key.first.GetStringView() | rng::to<std::string>(),
+                std::move(parse_result_value.first));
+            token_stream_span = parse_result_value.second;
           } else {
             throw std::runtime_error{fmt::format(
                 "Parser expectes string and colon for map key, token-stream: "
@@ -386,16 +412,16 @@ constexpr auto ParseTokens(std::tuple<std::shared_ptr<std::string const>,
       case kLeftBracket: {
         token_stream_span = token_stream_span.subspan(1);
 
-        std::vector<json_value_t> sub_json{};
+        Json::json_array_t inner_json{};
         // TODO: reserve size ?
         while (true) {
           if (token_stream_span.front().type == kRightBracket) {
-            ret_json = Json{sub_json};
+            ret_json = Json{std::move(inner_json)};
             break;
           }
 
-          auto [sub_json_element, advanced_subspan] = self(token_stream_span);
-          sub_json.push_back(GetRawValue(sub_json_element));
+          auto [inner_json_element, advanced_subspan] = self(token_stream_span);
+          inner_json.push_back(std::move(inner_json_element));
           token_stream_span = advanced_subspan;
         }
 
@@ -446,7 +472,7 @@ constexpr auto ParseTokens(std::tuple<std::shared_ptr<std::string const>,
 
     token_stream_span = token_stream_span.subspan(1);
     if (rng::size(token_stream_span) == 0) {
-      return {Json{std::move(ret_json)}, token_stream_span};
+      return {std::move(ret_json), token_stream_span};
     }
 
     auto const token_type{token_stream_span.front().type};
@@ -467,7 +493,7 @@ constexpr auto ParseTokens(std::tuple<std::shared_ptr<std::string const>,
       }
     }
 
-    return {Json{std::move(ret_json)}, token_stream_span};
+    return {std::move(ret_json), token_stream_span};
   }};
 
   return parse(std::get<TokenStream>(token_stream_with_buffer)).first;
