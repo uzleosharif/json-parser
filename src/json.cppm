@@ -112,41 +112,6 @@ export class Json final {
     return std::get<json_object_t>(m_value).contains(std::string{key});
   }
 
-  // template <class T>
-  // [[nodiscard]] constexpr auto GetObjectValue(std::string_view key) const
-  //     -> T const& {
-  //   if (not Contains(key)) {
-  //     throw std::invalid_argument{
-  //         fmt::format("key {} does not exist in json.", key)};
-  //   }
-  //
-  //   return
-  //   std::get<T>(std::get<json_object_t>(m_value).at(std::string{key}));
-  // }
-
-  // // TODO(): is there a way to optimize it by using some reference trickery
-  // // instead of value-semantics
-  // [[nodiscard]] constexpr auto ExtractArray(std::string_view key) const
-  //     -> std::vector<Json> {
-  //   if (not Contains(key)) {
-  //     throw std::invalid_argument{
-  //         fmt::format("key {} does not exist in json.", key)};
-  //   }
-  //
-  //   if (not IsArray()) {
-  //     throw std::invalid_argument{"value is not an array type."};
-  //   }
-  //
-  //   for (auto const& sub_json : std::get<json_array_t>(m_value)) {
-  //     //
-  //   }
-  //   return {};
-  // }
-  //
-  // [[nodiscard]] constexpr auto IsArray() const -> bool {
-  //   return std::holds_alternative<json_array_t>(m_value);
-  // }
-
   template <class T>
   [[nodiscard]] constexpr auto IsType() const -> bool {
     return std::holds_alternative<T>(m_value);
@@ -158,6 +123,26 @@ export class Json final {
     }
 
     return std::string_view{std::get<std::string>(m_value)};
+  }
+
+  [[nodiscard]] constexpr auto GetArray() const -> std::span<Json const> {
+    if (not IsType<json_array_t>()) {
+      throw std::invalid_argument{"does not contain array value."};
+    }
+
+    return std::get<json_array_t>(m_value);
+  }
+
+  [[nodiscard]] constexpr auto GetValue(std::string_view key) const
+      -> Json const& {
+    if (not Contains(key)) {
+      throw std::invalid_argument{fmt::format("does not contain {} key.", key)};
+    }
+    if (not IsType<json_object_t>()) {
+      throw std::invalid_argument{"is not a json map object."};
+    }
+
+    return std::get<json_object_t>(m_value).at(std::string{key});
   }
 
  private:
