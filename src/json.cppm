@@ -133,6 +133,14 @@ export class Json final {
     return std::get<json_array_t>(m_value);
   }
 
+  [[nodiscard]] constexpr auto GetMap() const -> json_object_t const& {
+    if (not IsType<json_object_t>()) {
+      throw std::invalid_argument{"does not contain map value."};
+    }
+
+    return std::get<json_object_t>(m_value);
+  }
+
   [[nodiscard]] constexpr auto GetValue(std::string_view key) const
       -> Json const& {
     if (not Contains(key)) {
