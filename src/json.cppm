@@ -88,7 +88,8 @@ export class Json final {
   constexpr explicit Json(bool value) : m_value{value} {}
   constexpr explicit Json(double value) : m_value{value} {}
   constexpr explicit Json(std::monostate monostate) : m_value{monostate} {}
-  constexpr explicit Json(std::string&& value) : m_value{std::move(value)} {}
+  constexpr explicit Json(std::string_view value)
+      : m_value{std::string(value)} {}
   constexpr explicit Json(json_object_t&& value) : m_value{std::move(value)} {}
   constexpr explicit Json(json_array_t&& value) : m_value{std::move(value)} {}
 
@@ -141,7 +142,7 @@ export class Json final {
     return std::get<json_object_t>(m_value);
   }
 
-  [[nodiscard]] constexpr auto GetValue(std::string_view key) const
+  [[nodiscard]] constexpr auto GetJson(std::string_view key) const
       -> Json const& {
     if (not Contains(key)) {
       throw std::invalid_argument{fmt::format("does not contain {} key.", key)};
