@@ -19,9 +19,9 @@ auto main() -> int {
                      chr::steady_clock::now() - start_time_point)
                      .count());
 
-    fmt::println("Welcome to {} v{}",
-                 json.GetObjectValue<std::string>("app_name"),
-                 json.GetObjectValue<double>("version"));
+    auto const& json_map{json.GetMap()};
+    fmt::println("Welcome to {} v{}", json_map.at("app_name").GetStringView(),
+                 json_map.at("version").GetDouble());
   } catch (std::exception const& ex) {
     fmt::println("Caught exception: {}", ex.what());
     return 1;

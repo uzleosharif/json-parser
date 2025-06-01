@@ -501,6 +501,14 @@ export [[nodiscard]] constexpr auto Parse(
       .value();
 }
 
+export [[nodiscard]] constexpr auto Parse(std::string_view json_content)
+    -> Json {
+  return std::optional{std::make_shared<std::string const>(json_content)}
+      .transform(Lex)
+      .transform(ParseTokens)
+      .value();
+}
+
 }  // namespace uzleo::json
 
 //
