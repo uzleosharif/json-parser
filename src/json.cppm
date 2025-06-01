@@ -120,10 +120,18 @@ export class Json final {
 
   [[nodiscard]] constexpr auto GetStringView() const -> std::string_view {
     if (not IsType<std::string>()) {
-      throw std::invalid_argument("does not contain string value.");
+      throw std::invalid_argument{"does not contain string value."};
     }
 
     return std::string_view{std::get<std::string>(m_value)};
+  }
+
+  [[nodiscard]] constexpr auto GetDouble() const -> double {
+    if (not IsType<double>()) {
+      throw std::invalid_argument{"does not contain double value."};
+    }
+
+    return std::get<double>(m_value);
   }
 
   [[nodiscard]] constexpr auto GetArray() const -> std::span<Json const> {
