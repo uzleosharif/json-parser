@@ -354,6 +354,11 @@ constexpr auto Lex(std::shared_ptr<std::string const>&& json_content_ptr)
           break;
         }
 
+        if (std::isspace(*citer)) {
+          rng::advance(citer, 1, json_content_end_iter);
+          break;
+        }
+
         throw std::invalid_argument{
             fmt::format("Failed to lex character: {}", *citer)};
       }
